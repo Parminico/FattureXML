@@ -30,10 +30,10 @@ export const parseXmlFile = (file) => {
         
         // --- DATI BASE ---
         const supplierName = getText("CedentePrestatore DatiAnagrafici Anagrafica Denominazione") || 
-                             (getText("CedentePrestatore DatiAnagrafici Anagrafica Nome") + " " + getText("CedentePrestatore DatiAnagrafici Anagrafica Cognome"));
+                            (getText("CedentePrestatore DatiAnagrafici Anagrafica Nome") + " " + getText("CedentePrestatore DatiAnagrafici Anagrafica Cognome"));
 
         const rawCustomerName = getText("CessionarioCommittente DatiAnagrafici Anagrafica Denominazione") || 
-                             (getText("CessionarioCommittente DatiAnagrafici Anagrafica Nome") + " " + getText("CessionarioCommittente DatiAnagrafici Anagrafica Cognome"));
+                            (getText("CessionarioCommittente DatiAnagrafici Anagrafica Nome") + " " + getText("CessionarioCommittente DatiAnagrafici Anagrafica Cognome"));
         const customerName = normalizeCustomerName(rawCustomerName);
         
         let invoiceNumber = getText("DatiGeneraliDocumento Numero") || "N/A";

@@ -154,6 +154,8 @@ button {
   background-color: var(--primary);
   color: white;
   border: none;
+  border-radius: 0.3rem;
+  padding: 0.5rem;
 }
 
 .btn-copy:hover {
@@ -167,6 +169,8 @@ button {
 .btn-reset {
   color: var(--danger);
   border-color: #fee2e2;
+  border-radius: 0.3rem;
+  padding: 0.5rem;
 }
 
 .btn-reset:hover {

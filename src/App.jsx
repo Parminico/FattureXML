@@ -135,13 +135,13 @@ export default function FattureXmlParser() {
             display: 'inline-block',
             width: '100%'
         }}>
-           <span style={{marginRight: '20px'}}>📄 XML analizzati: <b>{uniqueFilesCount}</b></span>
-           <span>📑 PDF in memoria: <b>{pdfCount}</b></span>
+          <span style={{marginRight: '20px'}}>📄 XML analizzati: <b>{uniqueFilesCount}</b></span>
+          <span>📑 PDF in memoria: <b>{pdfCount}</b></span>
         </div>
       )}
 
       {uniqueFilesCount > 0 && (
-         <div style={{display: 'flex', justifyContent: 'center', marginBottom: '2rem'}}>
+        <div style={{display: 'flex', justifyContent: 'center', marginBottom: '2rem'}}>
             <button 
               onClick={handleDownloadZip} 
               className="btn-primary" 
@@ -163,7 +163,7 @@ export default function FattureXmlParser() {
                 </>
               )}
             </button>
-         </div>
+        </div>
       )}
 
       <ResultsCard 
