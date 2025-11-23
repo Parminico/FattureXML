@@ -28,13 +28,12 @@ export const parseXmlFile = (file) => {
 
         const getText = (selector) => xmlDoc.querySelector(selector)?.textContent || "";
         
-        // Dati Comuni
+        // --- DATI BASE ---
         const supplierName = getText("CedentePrestatore DatiAnagrafici Anagrafica Denominazione") || 
                              (getText("CedentePrestatore DatiAnagrafici Anagrafica Nome") + " " + getText("CedentePrestatore DatiAnagrafici Anagrafica Cognome"));
 
         const rawCustomerName = getText("CessionarioCommittente DatiAnagrafici Anagrafica Denominazione") || 
                              (getText("CessionarioCommittente DatiAnagrafici Anagrafica Nome") + " " + getText("CessionarioCommittente DatiAnagrafici Anagrafica Cognome"));
-        
         const customerName = normalizeCustomerName(rawCustomerName);
         
         let invoiceNumber = getText("DatiGeneraliDocumento Numero") || "N/A";
@@ -48,20 +47,25 @@ export const parseXmlFile = (file) => {
             invoiceNumber = "N. credito " + invoiceNumber;
         }
 
-        // --- CALCOLO IMPORTI TOTALI ---
+        // --- CALCOLO IMPORTI TOTALI FATTURA ---
         let totalTaxablePositive = 0; 
         let totalDiscount = 0;       
         let totalVat = 0;            
-        let totalDoc = 0;            
+        let totalDoc = 0;    
+        
+        // Recuperiamo l'aliquota IVA principale (servirà per lo scorporo delle rate)
+        let mainVatRate = 0; 
 
         // 1. Analisi Riepilogo IVA
         const allSummaries = xmlDoc.querySelectorAll("DatiRiepilogo");
         allSummaries.forEach(sum => {
             const valImp = parseFloat(sum.querySelector("ImponibileImporto")?.textContent || "0");
             const valTax = parseFloat(sum.querySelector("Imposta")?.textContent || "0");
+            const rate = parseFloat(sum.querySelector("AliquotaIVA")?.textContent || "0");
             
             if (valImp >= 0) {
                 totalTaxablePositive += valImp;
+                if (rate > 0) mainVatRate = rate; // Memorizziamo l'aliquota (se ce n'è una prevalente > 0)
             } else {
                 totalDiscount += valImp;
             }
@@ -85,11 +89,15 @@ export const parseXmlFile = (file) => {
             }
         }
 
-        // 4. Totale Documento
+        // 4. Totale Documento (Reale)
         const totalDocStr = getText("ImportoTotaleDocumento");
-        totalDoc = totalDocStr ? parseFloat(totalDocStr) : (finalTaxable + totalVat + finalCassa);
+        if (totalDocStr) {
+             totalDoc = parseFloat(totalDocStr);
+        } else {
+             totalDoc = parseFloat((finalTaxable + totalVat + finalCassa).toFixed(2));
+        }
 
-        // Descrizione
+        // --- DESCRIZIONE E PAGAMENTO ---
         let baseDescription = "";
         const descNodes = xmlDoc.querySelectorAll("Descrizione");
         if (descNodes.length > 0) {
@@ -103,7 +111,7 @@ export const parseXmlFile = (file) => {
         if (payNode) payCodeRaw = payNode.textContent;
         const payCodeDesc = getPaymentMethodDescription(payCodeRaw);
 
-        // --- GENERAZIONE RIGHE ---
+        // --- GENERAZIONE RIGHE (RATE) ---
         const paymentNodes = xmlDoc.querySelectorAll("DatiPagamento DettaglioPagamento");
         const generatedRows = [];
 
@@ -113,11 +121,10 @@ export const parseXmlFile = (file) => {
             return documentDate;
         };
 
-        // ID base per raggruppare le righe della stessa fattura
         const fileId = Math.random().toString(36).substr(2, 9);
 
+        // CASO 1: Riga Singola (o Nota Credito)
         if (isCreditNote || paymentNodes.length <= 1) {
-            // RIGA SINGOLA
             let dueDateRaw = getText("DataScadenzaPagamento");
             if (!dueDateRaw && paymentNodes.length > 0) {
                 dueDateRaw = paymentNodes[0].querySelector("DataScadenzaPagamento")?.textContent;
@@ -125,8 +132,8 @@ export const parseXmlFile = (file) => {
             
             generatedRows.push({
                 id: fileId + "-0",
-                fileId: fileId, // ID comune
-                isParent: true, // Conta come 1 fattura
+                fileId: fileId, 
+                isParent: true,
                 fileName: file.name,
                 supplierName, customerName, invoiceNumber, documentDate, 
                 dueDate: determineDueDate(dueDateRaw) || "N/A",
@@ -143,52 +150,62 @@ export const parseXmlFile = (file) => {
             });
         } 
         else {
-            // RATE MULTIPLE -> SCORPORO
+            // CASO 2: RATE MULTIPLE (Scorporo Preciso)
+            
             paymentNodes.forEach((node, index) => {
                 const currentDueDate = determineDueDate(node.querySelector("DataScadenzaPagamento")?.textContent);
                 
-                // Descrizione senza "+"
+                // Descrizione CORRETTA: "1'/4 trinciato..." (senza il +)
                 const prefix = `${index + 1}'/${paymentNodes.length} `;
                 const installmentDesc = prefix + baseDescription;
 
+                // Importo LORDO della rata (quello che paghi)
                 const paymentAmount = parseFloat(node.querySelector("ImportoPagamento")?.textContent || "0");
                 
-                // Calcolo proporzionale per questa rata
+                // Calcolo IMPONIBILE e IVA partendo dal LORDO della rata
+                // Formula scorporo: Imponibile = Lordo / (1 + (Aliquota/100))
                 let rowTaxable = 0;
                 let rowVat = 0;
-                let rowCassa = 0;
-                let rowTotal = paymentAmount; // Il totale della rata è l'importo pagamento
-
-                if (totalDoc !== 0) {
-                    const ratio = paymentAmount / totalDoc;
-                    rowTaxable = finalTaxable * ratio;
-                    rowVat = totalVat * ratio;
-                    rowCassa = finalCassa * ratio;
-                } else if (index === 0) {
-                     // Caso totale 0, metto tutto sulla prima rata per non perdere i dati
-                     rowTaxable = finalTaxable;
-                     rowVat = totalVat;
-                     rowCassa = finalCassa;
-                     rowTotal = totalDoc;
+                let rowCassa = 0; // La cassa di solito non si rateizza così, ma teniamo la logica proporzionale se serve
+                
+                if (mainVatRate > 0) {
+                    // Scorporo usando l'aliquota IVA principale trovata nel documento (es. 10 o 22)
+                    rowTaxable = paymentAmount / (1 + (mainVatRate / 100));
+                    rowVat = paymentAmount - rowTaxable;
+                } else {
+                    // Se non c'è IVA (0%), tutto è imponibile (o esente)
+                    // Oppure usiamo il metodo proporzionale sul totale documento come fallback
+                    if (totalDoc !== 0) {
+                        const ratio = paymentAmount / totalDoc;
+                        rowTaxable = finalTaxable * ratio;
+                        rowVat = totalVat * ratio;
+                        rowCassa = finalCassa * ratio;
+                    }
                 }
+
+                // Il "Totale" visualizzato per questa riga è l'importo della rata stessa
+                const rowTotal = paymentAmount; 
 
                 generatedRows.push({
                     id: fileId + "-" + index,
                     fileId: fileId,
-                    isParent: index === 0, // Solo la prima riga conta per il contatore file
+                    isParent: index === 0,
                     fileName: file.name,
                     supplierName, customerName, invoiceNumber, documentDate,
                     dueDate: currentDueDate,
+                    
+                    // Valori scorporati per la singola rata
                     taxableAmount: rowTaxable.toFixed(2),
                     vatAmount: rowVat.toFixed(2),
-                    totalAmount: rowTotal.toFixed(2),
+                    totalAmount: rowTotal.toFixed(2), // Questo è il lordo rata (es. 3999.27)
                     pensionFund: rowCassa.toFixed(2),
+                    
                     withholdingTax: withholdingTax, 
                     description: installmentDesc,
                     paymentMethod: payCodeDesc,
                     docType: docTypeDesc,
                     isCreditNote: isCreditNote,
-                    isInstallment: true // Flag per colore azzurro
+                    isInstallment: true 
                 });
             });
         }
