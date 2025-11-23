@@ -11,6 +11,9 @@ export default function FattureXmlParser() {
   const [copied, setCopied] = useState(false);
   const fileInputRef = useRef(null);
 
+  // Conta i file unici (non le righe totali)
+  const uniqueFilesCount = invoices.filter(inv => inv.isParent).length;
+
   const resetAll = () => {
     setInvoices([]);
     setError(null);
@@ -18,8 +21,9 @@ export default function FattureXmlParser() {
     if (fileInputRef.current) fileInputRef.current.value = "";
   };
 
-  const removeInvoice = (id) => {
-    setInvoices(prev => prev.filter(invoice => invoice.id !== id));
+  // Rimuove tutte le righe associate allo stesso file
+  const removeInvoice = (fileId) => {
+    setInvoices(prev => prev.filter(invoice => invoice.fileId !== fileId));
   };
 
   const handleFiles = (selectedFiles) => {
@@ -92,6 +96,13 @@ export default function FattureXmlParser() {
       .catch(() => alert("Errore copia"));
   };
 
+  // Determina la classe CSS per la riga
+  const getRowClass = (inv) => {
+    if (inv.isCreditNote) return "row-credit-note";
+    if (inv.isInstallment) return "row-installment";
+    return "";
+  };
+
   return (
     <div className="app-container">
       <header className="main-header">
@@ -136,7 +147,8 @@ export default function FattureXmlParser() {
       {invoices.length > 0 && (
         <div className="card">
           <div className="card-header">
-            <h2>Riepilogo ({invoices.length})</h2>
+            {/* Contatore File (non righe) */}
+            <h2>Riepilogo ({uniqueFilesCount} fatture caricate)</h2>
             <div className="actions">
               <button onClick={copyToClipboard} className={`btn btn-copy ${copied ? 'copied' : ''}`}>
                 <Copy size={16} /> {copied ? "Copiato!" : "Copia Dati"}
@@ -169,7 +181,7 @@ export default function FattureXmlParser() {
               </thead>
               <tbody>
                 {invoices.map((inv) => (
-                  <tr key={inv.id} className={inv.isCreditNote ? "row-credit-note" : ""}>
+                  <tr key={inv.id} className={getRowClass(inv)}>
                     <td>{inv.customerName}</td>
                     <td>{inv.supplierName}</td>
                     <td>{inv.invoiceNumber}</td>
@@ -188,7 +200,7 @@ export default function FattureXmlParser() {
                     <td className="col-right">{inv.paymentMethod}</td>
                     <td>{inv.docType}</td>
                     <td style={{textAlign: 'right'}}>
-                      <button className="btn-icon" onClick={() => removeInvoice(inv.id)}>
+                      <button className="btn-icon" onClick={() => removeInvoice(inv.fileId)}>
                         <Trash2 size={16} />
                       </button>
                     </td>
@@ -198,7 +210,7 @@ export default function FattureXmlParser() {
             </table>
           </div>
           <div className="footer-note">
-            Copia per Excel esclude Totale, Pagamento e Tipo. Note di credito in rosso.
+            Copia per Excel esclude Totale, Pagamento e Tipo. Note di credito in rosso, Rate in azzurro.
           </div>
         </div>
       )}

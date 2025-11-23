@@ -1,14 +1,16 @@
 /* Reset di base */
 :root {
-  --primary: #2563eb;
-  --primary-hover: #1d4ed8;
-  --bg-color: #f8fafc;
-  --card-bg: #ffffff;
-  --text-main: #1e293b;
-  --text-muted: #64748b;
-  --border-color: #e2e8f0;
-  --danger: #ef4444;
-  --success: #22c55e;
+  --primary: #2563eb;       /* Blu principale */
+  --primary-hover: #1d4ed8; /* Blu scuro */
+  --bg-color: #f8fafc;      /* Sfondo pagina */
+  --card-bg: #ffffff;       /* Sfondo riquadri */
+  --text-main: #1e293b;     /* Testo scuro */
+  --text-muted: #64748b;    /* Testo grigio */
+  --border-color: #e2e8f0;  /* Bordi */
+  --danger: #ef4444;        /* Rosso */
+  --success: #22c55e;       /* Verde */
+  --install-bg: #e0f2fe; /* Azzurro per le rate */
+  --install-text: #0369a1;
 }
 
 * {
@@ -229,13 +231,19 @@ button {
   background-color: #f8fafc;
 }
 
-/* STILE SPECIALE PER NOTE DI CREDITO */
+/* STILE PER NOTE DI CREDITO */
 .invoice-table tr.row-credit-note td {
-  color: #dc2626; /* Rosso scuro */
-  background-color: #fef2f2; /* Rosso chiarissimo sfondo */
+  color: #dc2626; 
+  background-color: #fef2f2; 
 }
 
-/* MODIFICA QUI: Aggiunto white-space: nowrap per evitare a capo */
+/* STILE PER RATE MULTIPLE */
+.invoice-table tr.row-installment td {
+  background-color: var(--install-bg);
+  color: var(--install-text);
+}
+
+/* MODIFICA: white-space: nowrap impedisce all'euro di andare a capo */
 .col-right {
   text-align: right;
   font-family: 'Courier New', Courier, monospace;
