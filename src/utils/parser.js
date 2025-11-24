@@ -81,21 +81,17 @@ export const parseXmlFile = (file) => {
         let finalTaxable = totalTaxablePositive;
         let finalCassa = pensionAmount;
 
-        if (pensionNode && pensionNode.querySelector("ImponibileCassa")) {
-            // CASO A: Il file XML ci dice esplicitamente qual è l'imponibile netto (es. Giuggioli)
-            finalTaxable = parseFloat(pensionNode.querySelector("ImponibileCassa").textContent);
-        } else {
-            // CASO B: Il tag manca (es. Marigo). 
-            // L'imponibile del riepilogo (totalTaxablePositive) INCLUDE la cassa.
-            // Quindi dobbiamo sottrarla per avere l'imponibile "pulito".
-            if (finalCassa > 0) {
-                finalTaxable = finalTaxable - finalCassa;
-            }
+        // Gestione caso particolare: a volte la cassa viene messa come riga negativa nel riepilogo (sconto)
+        if (finalCassa === 0 && totalDiscount < 0) {
+            finalCassa = totalDiscount;
+        }
 
-            // Vecchia logica per gestire eventuali sconti/arrotondamenti negativi come cassa
-            if (finalCassa === 0 && totalDiscount < 0) {
-                finalCassa = totalDiscount;
-            }
+        // LOGICA UNIVERSALE:
+        // Il "totalTaxablePositive" è la somma di TUTTI i riepiloghi (Prestazioni + Spese Art.15 + Cassa).
+        // Per trovare l'imponibile da mettere in Excel (Prestazioni + Spese), dobbiamo semplicemente togliere la Cassa.
+        // Non usiamo più "ImponibileCassa" perché escluderebbe le spese esenti (es. Art. 15).
+        if (finalCassa !== 0) {
+            finalTaxable = finalTaxable - finalCassa;
         }
 
         // 4. Totale Documento (Reale)
