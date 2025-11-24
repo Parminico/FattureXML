@@ -82,8 +82,17 @@ export const parseXmlFile = (file) => {
         let finalCassa = pensionAmount;
 
         if (pensionNode && pensionNode.querySelector("ImponibileCassa")) {
+            // CASO A: Il file XML ci dice esplicitamente qual è l'imponibile netto (es. Giuggioli)
             finalTaxable = parseFloat(pensionNode.querySelector("ImponibileCassa").textContent);
         } else {
+            // CASO B: Il tag manca (es. Marigo). 
+            // L'imponibile del riepilogo (totalTaxablePositive) INCLUDE la cassa.
+            // Quindi dobbiamo sottrarla per avere l'imponibile "pulito".
+            if (finalCassa > 0) {
+                finalTaxable = finalTaxable - finalCassa;
+            }
+
+            // Vecchia logica per gestire eventuali sconti/arrotondamenti negativi come cassa
             if (finalCassa === 0 && totalDiscount < 0) {
                 finalCassa = totalDiscount;
             }
@@ -92,9 +101,9 @@ export const parseXmlFile = (file) => {
         // 4. Totale Documento (Reale)
         const totalDocStr = getText("ImportoTotaleDocumento");
         if (totalDocStr) {
-             totalDoc = parseFloat(totalDocStr);
+            totalDoc = parseFloat(totalDocStr);
         } else {
-             totalDoc = parseFloat((finalTaxable + totalVat + finalCassa).toFixed(2));
+            totalDoc = parseFloat((finalTaxable + totalVat + finalCassa).toFixed(2));
         }
 
         // --- DESCRIZIONE E PAGAMENTO ---

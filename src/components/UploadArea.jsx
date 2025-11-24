@@ -17,7 +17,19 @@ export default function UploadArea({ onFilesSelected, error }) {
         e.preventDefault();
         e.currentTarget.classList.remove('dragging');
         if (e.dataTransfer.files && e.dataTransfer.files.length > 0) {
-        onFilesSelected(e.dataTransfer.files);
+            onFilesSelected(e.dataTransfer.files);
+        }
+    };
+
+    // --- NUOVA FUNZIONE DI GESTIONE ---
+    const handleInputChange = (e) => {
+        if (e.target.files && e.target.files.length > 0) {
+            // Convertiamo i file in un array "statico" per passarli al padre
+            const filesArray = Array.from(e.target.files);
+            onFilesSelected(filesArray);
+            
+            //Resettiamo l'input subito dopo!
+            e.target.value = ""; 
         }
     };
 
@@ -37,7 +49,6 @@ export default function UploadArea({ onFilesSelected, error }) {
             <div className="upload-content">
                 <div style={{display: 'flex', gap: '10px'}}>
                     <FileText className="icon-large" />
-                    {/* Icona PDF aggiuntiva per far capire che si possono caricare */}
                     <File className="icon-large" style={{opacity: 0.5}} />
                 </div>
                 <div>
@@ -49,13 +60,13 @@ export default function UploadArea({ onFilesSelected, error }) {
                 </div>
                 <button className="btn-primary">Sfoglia File</button>
             </div>
+            
             <input 
                 type="file" 
                 ref={fileInputRef} 
                 className="hidden" 
-                // Accettiamo XML, P7M e PDF
                 accept=".xml,.p7m,.pdf" 
-                onChange={(e) => e.target.files && onFilesSelected(e.target.files)} 
+                onChange={handleInputChange} 
                 multiple 
                 style={{display:'none'}}
             />

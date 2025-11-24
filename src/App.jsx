@@ -18,8 +18,9 @@ export default function FattureXmlParser() {
 
   // Helper per nome file base
   const getBaseName = (filename) => {
-    return filename.replace(/\.(xml|p7m|pdf)$/i, "").replace(/\.xml$/i, ""); 
-  };
+      // Questa REGEX rimuove qualsiasi combinazione ripetuta di .xml, .p7m o .pdf alla fine del nome
+      return filename.replace(/(\.xml|\.p7m|\.pdf)+$/i, ""); 
+    };
 
   const handleFiles = async (selectedFiles) => {
     const validXmlFiles = [];
