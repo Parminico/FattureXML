@@ -18,7 +18,7 @@ export default function FattureXmlParser() {
   const [pwInput, setPwInput] = useState("");
 
   // Nome in codice per la password
-  const AKKESO = "segreto123";
+  const AKKESO = "1";
 
   const handleLogin = (e) => {
     e.preventDefault();
