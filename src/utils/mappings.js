@@ -37,7 +37,7 @@ export const normalizeCustomerName = (originalName) => {
     if (upperName.includes("VALORIZZAZIONE")) return "VA";
     if (upperName.includes("DOIOLA")) return "Doiola";
     if (upperName.includes("COSTE")) return "Coste";
-    if (upperName.includes("SAN VITTORE")) return "SV";
+    if (upperName.includes("VITTORE")) return "SV";
     if (upperName.includes("METANIA") || upperName.includes("CERADA")) return "METANIA";
 
     return originalName.trim();
@@ -66,4 +66,10 @@ export const getCompactDate = (isoDate) => {
     if (parts.length !== 3) return "000000";
     // Prendi ultime 2 cifre anno + mese + giorno
     return parts[0].slice(2) + parts[1] + parts[2];
+};
+
+// --- CONFIGURAZIONE SICUREZZA ---
+export const APP_CONFIG = {
+    PASSWORD: "1", // La tua password
+    ALLOWED_DOMAINS: ["localhost", "127.0.0.1", "fatture-xml.vercel.app"] // I tuoi domini permessi
 };

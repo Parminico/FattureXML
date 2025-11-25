@@ -1,5 +1,5 @@
-import React, { useState } from "react";
-import { Download, FileArchive, Upload, FileText } from "lucide-react"; 
+import React, { useState, useEffect } from "react";
+import { Download, FileArchive, Upload, FileText, ShieldAlert } from "lucide-react"; 
 import JSZip from "jszip"; 
 import { saveAs } from "file-saver";
 
@@ -7,25 +7,34 @@ import Header from "./components/Header";
 import UploadArea from "./components/UploadArea";
 import ResultsCard from "./components/ResultsCard";
 import { parseXmlFile } from "./utils/parser";
-import { sanitizeInvoiceNumber, sanitizeFilenameString, getCompactDate } from "./utils/mappings";
+// Importiamo APP_CONFIG da mappings
+import { sanitizeInvoiceNumber, sanitizeFilenameString, getCompactDate, APP_CONFIG } from "./utils/mappings";
 import "./App.css";
 
 export default function FattureXmlParser() {
-  // --- 1. GESTIONE PASSWORD ---
+  // --- 1. SICUREZZA (Password + Dominio) ---
   const [isAuthenticated, setIsAuthenticated] = useState(false);
-  
-  // Stato per l'input della password
   const [pwInput, setPwInput] = useState("");
+  const [isDomainAllowed, setIsDomainAllowed] = useState(true);
 
-  // Nome in codice per la password
-  const AKKESO = "1";
+  // Controllo Dominio all'avvio
+  useEffect(() => {
+    const currentHostname = window.location.hostname;
+    // Se il dominio corrente NON è nella lista dei permessi (presa da APP_CONFIG)
+    const isAllowed = APP_CONFIG.ALLOWED_DOMAINS.some(domain => currentHostname.includes(domain));
+    
+    if (!isAllowed) {
+        setIsDomainAllowed(false);
+    }
+  }, []);
 
   const handleLogin = (e) => {
     e.preventDefault();
-    if (pwInput === AKKESO) {
+    // Controllo password usando APP_CONFIG
+    if (pwInput === APP_CONFIG.PASSWORD) {
         setIsAuthenticated(true);
     } else {
-        alert("Password errata!");
+        alert("Codice di accesso errato.");
     }
   };
 
@@ -37,7 +46,6 @@ export default function FattureXmlParser() {
 
   // Helper per nome file base
   const getBaseName = (filename) => {
-      // Questa REGEX rimuove qualsiasi combinazione ripetuta di .xml, .p7m o .pdf alla fine del nome
       return filename.replace(/(\.xml|\.p7m|\.pdf)+$/i, ""); 
   };
 
@@ -90,7 +98,6 @@ export default function FattureXmlParser() {
     setInvoices(prev => prev.filter(invoice => invoice.fileId !== fileId));
   };
 
-  // --- LOGICA DOWNLOAD ZIP ---
   const handleDownloadZip = async () => {
     if (invoices.length === 0) return;
     setIsZipping(true);
@@ -105,9 +112,8 @@ export default function FattureXmlParser() {
       const matchingPdf = pdfFiles.find(pdf => getBaseName(pdf.name) === baseNameXML);
 
       if (matchingPdf) {
-        // COSTRUZIONE NOME (con pulizia soft)
         const dateStr = getCompactDate(inv.documentDate);
-        const cleanNum = sanitizeInvoiceNumber(inv.invoiceNumber); // Lascia spazi/punti
+        const cleanNum = sanitizeInvoiceNumber(inv.invoiceNumber); 
         const cleanSupplier = sanitizeFilenameString(inv.supplierName);
         const cleanCustomer = sanitizeFilenameString(inv.customerName);
 
@@ -135,9 +141,30 @@ export default function FattureXmlParser() {
     setIsZipping(false);
   };
 
-  // --- 3. RENDER CONDIZIONALE (LOGIN vs APP) ---
+  // --- 3. RENDER CONDIZIONALE ---
 
-  // SE NON LOGGATO: MOSTRA FORM LOGIN
+  // A. BLOCCO DOMINIO (Massima Priorità)
+  if (!isDomainAllowed) {
+      return (
+        <div style={{
+            height: '100vh', 
+            display: 'flex', 
+            flexDirection: 'column',
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            background: '#fef2f2',
+            color: '#991b1b',
+            textAlign: 'center',
+            padding: '20px'
+        }}>
+            <ShieldAlert size={64} style={{marginBottom: '20px'}} />
+            <h1>Accesso Negato</h1>
+            <p>Questo software non è autorizzato a girare su questo dominio.</p>
+        </div>
+      );
+  }
+
+  // B. BLOCCO PASSWORD
   if (!isAuthenticated) {
     return (
         <div style={{
@@ -162,11 +189,11 @@ export default function FattureXmlParser() {
                 </div>
                 <h2 style={{marginBottom: '0.5rem', color: '#1e293b'}}>Area Riservata</h2>
                 <p style={{marginBottom: '1.5rem', color: '#64748b', fontSize: '0.9rem'}}>
-                    Accesso consentito solo al personale autorizzato
+                    Inserisci il codice di accesso
                 </p>
                 <input 
                     type="password" 
-                    placeholder="Codice Accesso" 
+                    placeholder="Codice" 
                     value={pwInput} 
                     onChange={(e) => setPwInput(e.target.value)}
                     style={{
@@ -196,7 +223,7 @@ export default function FattureXmlParser() {
     );
   }
 
-  // SE LOGGATO: MOSTRA L'APP NORMALE
+  // C. APP NORMALE
   const uniqueFilesCount = invoices.filter(inv => inv.isParent).length;
   const pdfCount = pdfFiles.length;
 
