@@ -78,19 +78,31 @@ export const parseXmlFile = (file) => {
         const withholdingTax = getText("DatiRitenuta ImportoRitenuta") || "0.00";
 
         // 3. Determina Imponibile Finale e Cassa Finale (Totali della fattura)
+        // 3. Determina Imponibile Finale e Cassa Finale (Totali della fattura)
         let finalTaxable = totalTaxablePositive;
         let finalCassa = pensionAmount;
 
-        // Gestione caso particolare: a volte la cassa viene messa come riga negativa nel riepilogo (sconto)
-        if (finalCassa === 0 && totalDiscount < 0) {
-            finalCassa = totalDiscount;
+        // --- GESTIONE SCONTI E ARROTONDAMENTI (Positivi e Negativi) ---
+
+        // Se abbiamo dei valori negativi nel riepilogo (totalDiscount)...
+        if (totalDiscount < 0) {
+            // CASO 1: ARROTONDAMENTO NEGATIVO (es. Amazon -0.01€)
+            // Se il valore è molto piccolo (<= 1€), lo consideriamo un arrotondamento tecnico.
+            // Lo uniamo all'imponibile per far quadrare il totale fattura.
+            if (Math.abs(totalDiscount) <= 1.00) {
+                finalTaxable = finalTaxable + totalDiscount;
+            } 
+            // CASO 2: SCONTO REALE / CASSA NEGATIVA (es. Duynie -499€)
+            // Se il valore è grande, è una voce separata (Sconto merce o Cassa negativa).
+            // Lo lasciamo separato nella colonna "Cassa" (solo se non c'è già una cassa previdenziale).
+            else if (finalCassa === 0) {
+                finalCassa = totalDiscount;
+            }
         }
 
-        // LOGICA UNIVERSALE:
-        // Il "totalTaxablePositive" è la somma di TUTTI i riepiloghi (Prestazioni + Spese Art.15 + Cassa).
-        // Per trovare l'imponibile da mettere in Excel (Prestazioni + Spese), dobbiamo semplicemente togliere la Cassa.
-        // Non usiamo più "ImponibileCassa" perché escluderebbe le spese esenti (es. Art. 15).
-        if (finalCassa !== 0) {
+        // --- PULIZIA CASSA PREVIDENZIALE ---
+        
+        if (finalCassa > 0) {
             finalTaxable = finalTaxable - finalCassa;
         }
 

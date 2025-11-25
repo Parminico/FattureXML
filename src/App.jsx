@@ -1,5 +1,5 @@
-import React, { useState, useRef } from "react";
-import { Download, FileArchive, Upload, FileText } from "lucide-react"; // Aggiunti icon import
+import React, { useState } from "react";
+import { Download, FileArchive, Upload, FileText } from "lucide-react"; 
 import JSZip from "jszip"; 
 import { saveAs } from "file-saver";
 
@@ -11,6 +11,25 @@ import { sanitizeInvoiceNumber, sanitizeFilenameString, getCompactDate } from ".
 import "./App.css";
 
 export default function FattureXmlParser() {
+  // --- 1. GESTIONE PASSWORD ---
+  const [isAuthenticated, setIsAuthenticated] = useState(false);
+  
+  // Stato per l'input della password
+  const [pwInput, setPwInput] = useState("");
+
+  // Nome in codice per la password
+  const AKKESO = "segreto123";
+
+  const handleLogin = (e) => {
+    e.preventDefault();
+    if (pwInput === AKKESO) {
+        setIsAuthenticated(true);
+    } else {
+        alert("Password errata!");
+    }
+  };
+
+  // --- 2. STATO DELL'APPLICAZIONE ---
   const [invoices, setInvoices] = useState([]);
   const [pdfFiles, setPdfFiles] = useState([]); 
   const [error, setError] = useState(null);
@@ -20,7 +39,7 @@ export default function FattureXmlParser() {
   const getBaseName = (filename) => {
       // Questa REGEX rimuove qualsiasi combinazione ripetuta di .xml, .p7m o .pdf alla fine del nome
       return filename.replace(/(\.xml|\.p7m|\.pdf)+$/i, ""); 
-    };
+  };
 
   const handleFiles = async (selectedFiles) => {
     const validXmlFiles = [];
@@ -116,6 +135,68 @@ export default function FattureXmlParser() {
     setIsZipping(false);
   };
 
+  // --- 3. RENDER CONDIZIONALE (LOGIN vs APP) ---
+
+  // SE NON LOGGATO: MOSTRA FORM LOGIN
+  if (!isAuthenticated) {
+    return (
+        <div style={{
+            height: '100vh', 
+            display: 'flex', 
+            justifyContent: 'center', 
+            alignItems: 'center', 
+            background: '#f8fafc',
+            fontFamily: "'Segoe UI', sans-serif"
+        }}>
+            <form onSubmit={handleLogin} style={{
+                background: 'white', 
+                padding: '2.5rem', 
+                borderRadius: '12px', 
+                boxShadow: '0 10px 15px -3px rgba(0, 0, 0, 0.1)',
+                textAlign: 'center',
+                width: '100%',
+                maxWidth: '400px'
+            }}>
+                <div style={{marginBottom: '1.5rem', color: '#2563eb'}}>
+                    <FileText size={48} />
+                </div>
+                <h2 style={{marginBottom: '0.5rem', color: '#1e293b'}}>Area Riservata</h2>
+                <p style={{marginBottom: '1.5rem', color: '#64748b', fontSize: '0.9rem'}}>
+                    Accesso consentito solo al personale autorizzato
+                </p>
+                <input 
+                    type="password" 
+                    placeholder="Codice Accesso" 
+                    value={pwInput} 
+                    onChange={(e) => setPwInput(e.target.value)}
+                    style={{
+                        padding: '12px', 
+                        borderRadius: '6px', 
+                        border: '1px solid #cbd5e1',
+                        marginBottom: '1.5rem',
+                        width: '100%',
+                        fontSize: '1rem',
+                        outline: 'none'
+                    }}
+                />
+                <button 
+                    type="submit" 
+                    className="btn-primary" 
+                    style={{
+                        width: '100%', 
+                        padding: '12px', 
+                        fontSize: '1rem',
+                        cursor: 'pointer'
+                    }}
+                >
+                    Entra
+                </button>
+            </form>
+        </div>
+    );
+  }
+
+  // SE LOGGATO: MOSTRA L'APP NORMALE
   const uniqueFilesCount = invoices.filter(inv => inv.isParent).length;
   const pdfCount = pdfFiles.length;
 

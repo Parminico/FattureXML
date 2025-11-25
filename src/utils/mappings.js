@@ -35,7 +35,7 @@ export const normalizeCustomerName = (originalName) => {
     const upperName = originalName.toUpperCase();
 
     if (upperName.includes("VALORIZZAZIONE")) return "VA";
-    if (upperName.includes("DOIOLA")) return "DO";
+    if (upperName.includes("DOIOLA")) return "Doiola";
     if (upperName.includes("COSTE")) return "Coste";
     if (upperName.includes("SAN VITTORE")) return "SV";
     if (upperName.includes("METANIA") || upperName.includes("CERADA")) return "METANIA";
