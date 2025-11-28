@@ -7,7 +7,6 @@ import Header from "./components/Header";
 import UploadArea from "./components/UploadArea";
 import ResultsCard from "./components/ResultsCard";
 import { parseXmlFile } from "./utils/parser";
-// Importiamo APP_CONFIG da mappings
 import { sanitizeInvoiceNumber, sanitizeFilenameString, getCompactDate, APP_CONFIG } from "./utils/mappings";
 import "./App.css";
 
@@ -30,7 +29,6 @@ export default function FattureXmlParser() {
 
   const handleLogin = (e) => {
     e.preventDefault();
-    // Controllo password usando APP_CONFIG
     if (pwInput === APP_CONFIG.PASSWORD) {
         setIsAuthenticated(true);
     } else {
@@ -98,6 +96,21 @@ export default function FattureXmlParser() {
     setInvoices(prev => prev.filter(invoice => invoice.fileId !== fileId));
   };
 
+  // --- LOGICA CARTELLE CLIENTI ---
+  const getFolderName = (shortName) => {
+      // Mappa dalle sigle (normalizzate in parser.js) ai nomi cartella completi
+      const folderMap = {
+          "SV": "San Vittore",
+          "VA": "Valorizzazione",
+          "DO": "Doiola",
+          "Coste": "Coste",
+          "METANIA": "Metania"
+      };
+      
+      // Se è uno dei clienti speciali, usa il nome cartella, altrimenti usa il nome cliente così com'è o "Altro"
+      return folderMap[shortName] || shortName || "Altro";
+  };
+
   const handleDownloadZip = async () => {
     if (invoices.length === 0) return;
     setIsZipping(true);
@@ -119,7 +132,11 @@ export default function FattureXmlParser() {
 
         const newFilename = `${dateStr}_${cleanNum}_${cleanSupplier}_${cleanCustomer}.pdf`;
         
-        zip.file(newFilename, matchingPdf);
+        // Determina la cartella
+        const folderName = getFolderName(inv.customerName);
+        
+        // Aggiunge il file DENTRO la cartella specifica
+        zip.folder(folderName).file(newFilename, matchingPdf);
         count++;
       }
     });
@@ -132,7 +149,7 @@ export default function FattureXmlParser() {
 
     try {
       const content = await zip.generateAsync({ type: "blob" });
-      saveAs(content, "Fatture_Rinominate.zip");
+      saveAs(content, "Fatture_Rinominate_per_Cliente.zip");
     } catch (err) {
       console.error("Errore ZIP:", err);
       alert("Errore durante la creazione dell'archivio.");
@@ -268,7 +285,7 @@ export default function FattureXmlParser() {
               {isZipping ? "Compressione..." : (
                 <>
                   <FileArchive size={24} style={{marginRight: '10px'}}/> 
-                  Scarica PDF Rinominati (.zip)
+                  Scarica PDF e Organizza per Cliente (.zip)
                 </>
               )}
             </button>
